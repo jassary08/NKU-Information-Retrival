@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>网页快照</title>
+    <meta charset="UTF-8">
+    <style>
+        .snapshot-header {
+            background: #f8f9fa;
+            padding: 10px;
+            border-bottom: 1px solid #dfe1e5;
+            margin-bottom: 20px;
+        }
+        .snapshot-info {
+            color: #70757a;
+            font-size: 13px;
+        }
+        .original-link {
+            color: #1a0dab;
+            text-decoration: none;
+        }
+        .original-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="snapshot-header">
+        <div class="snapshot-info">
+            这是 <a href="{{ original_url }}" class="original-link">{{ original_url }}</a> 在 {{ captured_at.strftime('%Y-%m-%d %H:%M:%S') }} 的快照
+        </div>
+    </div>
+    <div class="snapshot-content">
+        {{ html_content | safe }}
+    </div>
+</body>
+</html>

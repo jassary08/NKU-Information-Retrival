@@ -1,0 +1,1044 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>新闻搜索</title>
+    <meta charset="UTF-8">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.21.2/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #fff;
+        }
+
+        .search-page {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+            transition: transform 0.3s;
+        }
+
+        .search-page.results-shown {
+            transform: translateY(0);
+            justify-content: flex-start;
+            min-height: 0;
+        }
+
+        .results-container {
+            width: 800px;
+            max-width: 90%;
+            margin-top: 0px; /* 添加顶部边距 */
+        }
+
+        .logo {
+            margin-bottom: 20px;
+        }
+
+        .logo img {
+            height: 92px;
+            width: auto;
+        }
+        .search-container {
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            padding: 16px;
+            width: 800px;
+            max-width: 90%;
+            margin-bottom: 20px;
+            position: relative;
+            background: white;
+        }
+        .results-shown .logo {
+            transform: scale(0.8);
+            margin-bottom: 10px;
+        }
+
+        /* 移除flex-1，避免不必要的拉伸 */
+        .results-container {
+            flex: none;
+        }
+
+        /* 当结果较少时，保持页面布局紧凑 */
+        .pagination {
+            margin-top: 20px;
+            margin-bottom: 20px;
+        }
+
+        /* 当显示建议框时改变搜索容器的圆角 */
+        .search-container:has(.suggestions-container[style*="display: block"]),
+        .search-container:has(.search-history-container.visible) {
+            border-bottom-left-radius: 0;
+            border-bottom-right-radius: 0;
+        }
+        .search-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .filter-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #dfe1e5;
+        }
+
+        .search-input {
+            flex: 1;
+            border: none;
+            outline: none;
+            font-size: 16px;
+            padding: 8px;
+        }
+
+        .filter-input {
+            border: 1px solid #dfe1e5;
+            border-radius: 4px;
+            padding: 6px;
+            font-size: 14px;
+            outline: none;
+        }
+
+        .filter-input:focus {
+            border-color: #4285f4;
+        }
+
+        .date-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .source-input {
+            min-width: 150px;
+        }
+
+        button {
+            background-color: #f8f9fa;
+            border: none;
+            color: #3c4043;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+
+        button:hover {
+            background-color: #f2f2f2;
+        }
+        .search-button {
+            background-color: #f8f9fa;
+            border: 1px solid #dfe1e5;
+            color: #3c4043;
+            padding: 8px 16px;
+            font-size: 14px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background-color 0.2s, box-shadow 0.2s;
+        }
+
+        .search-button:hover {
+            background-color: #f2f2f2;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .search-button:active {
+            background-color: #e8e8e8;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+
+        .results-container {
+            width: 800px;
+            max-width: 90%;
+            margin: 0 auto;
+        }
+
+        .results-container.visible {
+            display: block;
+        }
+
+        .result-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            max-width: 100%;
+        }
+
+        .result-title {
+            color: #1a0dab;
+            font-size: 18px;
+            margin-bottom: 8px;
+            text-decoration: none;
+            display: block;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 90%;
+        }
+
+        .result-url {
+            color: #006621;
+            font-size: 14px;
+            margin-bottom: 8px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 90%;
+        }
+
+        .result-snippet {
+            color: #3c4043;
+            font-size: 14px;
+            line-height: 1.4;
+            margin-bottom: 8px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-height: 2.8em;
+        }
+
+        .result-meta {
+            color: #70757a;
+            font-size: 12px;
+            margin-top: 4px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .results-summary {
+            margin-bottom: 20px;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .filter-info {
+            display: inline-block;
+            margin-left: 15px;
+            color: #70757a;
+            font-size: 13px;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .pagination button {
+            background-color: transparent;
+            border: none;
+            color: #1a73e8;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .pagination button:disabled {
+            color: #70757a;
+            cursor: default;
+        }
+
+        .suggestions-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dfe1e5;
+            border-top: none;
+            border-radius: 0 0 24px 24px;
+            box-shadow: 0 4px 6px rgba(32,33,36,0.28);
+            display: none;
+            z-index: 1000;
+            width: 100%; /* 确保宽度与父容器一致 */
+            margin-top: -1px; /* 消除边框重叠的间隙 */
+        }
+
+        .suggestion-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+        }
+
+        .suggestion-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .suggestion-text {
+            flex-grow: 1;
+        }
+
+        .suggestion-source {
+            color: #70757a;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .search-history-container {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border: 1px solid #dfe1e5;
+            border-top: none;
+            border-radius: 0 0 24px 24px;
+            box-shadow: 0 4px 6px rgba(32,33,36,0.28);
+            display: none;
+            z-index: 1000;
+            width: 100%;
+            margin-top: -1px;
+        }
+
+        .search-history-container.visible {
+            display: block;
+        }
+
+        .search-history-item {
+            padding: 8px 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            color: #9F7AEA;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .search-history-item:last-child {
+            border-bottom: none;
+        }
+
+        .search-history-item:hover {
+            background-color: #f8f9fa;
+        }
+
+        .search-history-query {
+            flex-grow: 1;
+            color: #9F7AEA;
+            font-size: 14px;
+        }
+
+        .search-history-date {
+            color: #9F7AEA;
+            font-size: 12px;
+            margin-left: 8px;
+        }
+
+        .doc-result-item {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background-color: #fff;
+        }
+
+        .doc-meta {
+            display: flex;
+            gap: 15px;
+            color: #666;
+            font-size: 13px;
+            margin-top: 8px;
+        }
+
+        .doc-type-badge {
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            background-color: #e2e8f0;
+            color: #4a5568;
+        }
+    </style>
+</head>
+<body>
+    <div id="auth-root"></div>
+    <div class="search-page">
+        <div class="logo">
+            <img src="../static/glegoo.jpg" alt="Google">
+        </div>
+
+        <div class="search-container">
+         <div class="search-row">
+            <select id="searchType" class="filter-input" onchange="handleSearchTypeChange()">
+                <option value="normal">普通查询</option>
+                <option value="phrase">短语查询</option>
+                <option value="wildcard">通配符查询</option>
+                <option value="document">文档查询</option>
+            </select>
+            <input type="text" id="searchInput" class="search-input" placeholder="输入关键词搜索新闻...">
+            <button onclick="performSearch(1)" class="search-button">搜索</button>
+        </div>
+
+        <div class="filter-row">
+            <div class="date-group">
+                <input type="date" id="startDate" class="filter-input" placeholder="起始日期">
+                <span>至</span>
+                <input type="date" id="endDate" class="filter-input" placeholder="结束日期">
+            </div>
+            <select id="docTypeFilter" class="filter-input" style="display: none;">
+                <option value="">所有文档类型</option>
+                <option value="pdf">PDF</option>
+                <option value="doc">Word文档</option>
+                <option value="ppt">PPT</option>
+                <option value="txt">文本文件</option>
+            </select>
+            <input type="text" id="sourceInput" class="filter-input source-input" placeholder="输入来源筛选">
+        </div>
+            <div class="suggestions-container"></div>
+            <div class="search-history-container"></div>
+        </div>
+
+        </div>
+
+        <div class="results-container" id="resultsContainer">
+            <div id="searchResults"></div>
+            <div class="pagination" id="pagination"></div>
+        </div>
+    </div>
+
+    <script type="text/babel">
+        const UserAuthComponent = () => {
+            const [isLoggedIn, setIsLoggedIn] = React.useState(false);
+            const [username, setUsername] = React.useState('');
+            const [showLoginModal, setShowLoginModal] = React.useState(false);
+            const [showRegisterModal, setShowRegisterModal] = React.useState(false);
+            const [showHistoryModal, setShowHistoryModal] = React.useState(false);
+            const [searchHistory, setSearchHistory] = React.useState([]);
+
+            // 添加检查登录状态的函数
+            const checkLoginStatus = async () => {
+                try {
+                    const response = await fetch('/check-login');
+                    if (response.ok) {
+                        const data = await response.json();
+                        setIsLoggedIn(true);
+                        setUsername(data.username);
+                    }
+                } catch (error) {
+                    console.error('检查登录状态失败:', error);
+                }
+            };
+
+            // 在组件加载时检查登录状态
+            React.useEffect(() => {
+                checkLoginStatus();
+            }, []);
+
+            const handleLogin = async (event) => {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                try {
+                    const response = await fetch('/login', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            username: formData.get('username'),
+                            password: formData.get('password'),
+                        }),
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        setIsLoggedIn(true);
+                        setUsername(data.username);
+                        setShowLoginModal(false);
+                    } else {
+                        alert('登录失败，请检查用户名和密码');
+                    }
+                } catch (error) {
+                    console.error('登录出错:', error);
+                }
+            };
+
+            const handleRegister = async (event) => {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                try {
+                    const response = await fetch('/register', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            username: formData.get('username'),
+                            password: formData.get('password'),
+                            email: formData.get('email'),
+                        }),
+                    });
+
+                    if (response.ok) {
+                        alert('注册成功，请登录');
+                        setShowRegisterModal(false);
+                        setShowLoginModal(true);
+                    } else {
+                        alert('注册失败，请重试');
+                    }
+                } catch (error) {
+                    console.error('注册出错:', error);
+                }
+            };
+
+            const handleLogout = () => {
+                setIsLoggedIn(false);
+                setUsername('');
+                fetch('/logout', { method: 'POST' });
+            };
+
+            const fetchSearchHistory = async () => {
+                try {
+                    const response = await fetch('/search-history');
+                    if (response.ok) {
+                        const history = await response.json();
+                        setSearchHistory(history);
+                        setShowHistoryModal(true);
+                    }
+                } catch (error) {
+                    console.error('获取搜索历史失败:', error);
+                }
+            };
+
+            return (
+                <div className="absolute top-4 right-4 flex items-center gap-4 z-50">
+                    {!isLoggedIn ? (
+                        <>
+                            <button onClick={() => setShowLoginModal(true)}
+                                    className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                                登录
+                            </button>
+                            <button onClick={() => setShowRegisterModal(true)}
+                                    className="px-4 py-2 text-sm border border-blue-500 text-blue-500 rounded hover:bg-blue-50">
+                                注册
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <span className="text-sm text-gray-600">欢迎, {username}</span>
+                            <button onClick={fetchSearchHistory}
+                                    className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded hover:bg-gray-200">
+                                查询记录
+                            </button>
+                            <button onClick={handleLogout}
+                                    className="px-4 py-2 text-sm bg-red-500 text-white rounded hover:bg-red-600">
+                                退出
+                            </button>
+                        </>
+                    )}
+
+                    {showLoginModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded-lg w-96">
+                                <h2 className="text-xl font-bold mb-4">用户登录</h2>
+                                <form onSubmit={handleLogin}>
+                                    <input name="username" type="text" placeholder="用户名"
+                                           className="w-full mb-3 p-2 border rounded" required />
+                                    <input name="password" type="password" placeholder="密码"
+                                           className="w-full mb-4 p-2 border rounded" required />
+                                    <div className="flex justify-end gap-2">
+                                        <button type="button" onClick={() => setShowLoginModal(false)}
+                                                className="px-4 py-2 text-sm text-gray-500">
+                                            取消
+                                        </button>
+                                        <button type="submit"
+                                                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                                            登录
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {showRegisterModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded-lg w-96">
+                                <h2 className="text-xl font-bold mb-4">用户注册</h2>
+                                <form onSubmit={handleRegister}>
+                                    <input name="username" type="text" placeholder="用户名"
+                                           className="w-full mb-3 p-2 border rounded" required />
+                                    <input name="email" type="email" placeholder="邮箱"
+                                           className="w-full mb-3 p-2 border rounded" required />
+                                    <input name="password" type="password" placeholder="密码"
+                                           className="w-full mb-4 p-2 border rounded" required />
+                                    <div className="flex justify-end gap-2">
+                                        <button type="button" onClick={() => setShowRegisterModal(false)}
+                                                className="px-4 py-2 text-sm text-gray-500">
+                                            取消
+                                        </button>
+                                        <button type="submit"
+                                                className="px-4 py-2 text-sm bg-blue-500 text-white rounded hover:bg-blue-600">
+                                            注册
+                                        </button>
+                                    </div>
+                                </form>
+                            </div>
+                        </div>
+                    )}
+
+                    {showHistoryModal && (
+                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded-lg w-96">
+                                <h2 className="text-xl font-bold mb-4">搜索历史记录</h2>
+                                <div className="max-h-96 overflow-y-auto">
+                                    {searchHistory.map((item, index) => (
+                                        <div key={index} className="p-2 mb-2 bg-gray-50 rounded">
+                                            <div className="font-medium">{item.query}</div>
+                                            <div className="text-sm text-gray-500">
+                                                {new Date(item.timestamp).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {searchHistory.length === 0 && (
+                                        <div className="text-center text-gray-500">暂无搜索记录</div>
+                                    )}
+                                </div>
+                                <div className="mt-4 flex justify-end">
+                                    <button onClick={() => setShowHistoryModal(false)}
+                                            className="px-4 py-2 text-sm bg-gray-100 rounded hover:bg-gray-200">
+                                        关闭
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('auth-root'));
+        root.render(<UserAuthComponent />);
+    </script>
+
+    <script>
+        let currentPage = 1;
+        let totalResults = 0;
+        const resultsPerPage = 10;
+        let suggestionsContainer;
+        let searchHistoryContainer;
+        let debounceTimer;
+
+        document.addEventListener('DOMContentLoaded', function() {
+            suggestionsContainer = document.querySelector('.suggestions-container');
+            searchHistoryContainer = document.querySelector('.search-history-container');
+
+            searchHistoryContainer = document.querySelector('.search-history-container');
+
+            const searchInput = document.getElementById('searchInput');
+
+            // 处理输入事件
+            searchInput.addEventListener('input', function() {
+                clearTimeout(debounceTimer);
+                const query = this.value.trim();
+                const currentSearchType = searchType.value;
+
+                 // 只在非文档查询模式下显示建议
+                 if (query && currentSearchType !== 'document') {
+                    hideSearchHistory();
+                    debounceTimer = setTimeout(() => {
+                    fetchSuggestions(query);
+                }, 300);
+                } else {
+                    // 输入框为空，隐藏建议
+                    hideSuggestions();
+                }
+            });
+
+            document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('searchInput');
+
+
+            clearTimeout(debounceTimer);
+            const query = this.value.trim();
+
+            if (query) {
+                // 用户开始输入，隐藏搜索历史并显示建议
+                hideSearchHistory();
+                debounceTimer = setTimeout(() => {
+                    fetchSuggestions(query);
+                }, 300);
+            } else {
+                // 输入框为空，隐藏建议
+                hideSuggestions();
+            }
+        });
+
+        // 处理点击事件，在点击页面其他地方时隐藏建议栏和搜索历史
+        document.addEventListener('click', function(e) {
+            const suggestionsContainer = document.querySelector('.suggestions-container');
+            const searchHistoryContainer = document.querySelector('.search-history-container');
+
+            if (!suggestionsContainer?.contains(e.target) &&
+                !searchHistoryContainer?.contains(e.target) &&
+                e.target !== searchInput) {
+                hideSuggestions();
+                hideSearchHistory();
+            }
+        });
+
+        // 处理搜索按钮点击事件
+        const searchButton = document.querySelector('button[onclick="performSearch(1)"]');
+        if (searchButton) {
+            searchButton.addEventListener('click', function() {
+                hideSuggestions();
+                hideSearchHistory();
+            });
+        }
+
+            // 处理聚焦事件
+            searchInput.addEventListener('focus', function() {
+                const query = this.value.trim();
+                if (!query) {
+                    fetchSearchHistory();
+                }
+            });
+
+            // 处理点击外部区域隐藏建议和搜索历史
+            document.addEventListener('click', function(e) {
+                if (!suggestionsContainer.contains(e.target) &&
+                    e.target !== searchInput) {
+                    hideSuggestions();
+                }
+                if (!searchHistoryContainer.contains(e.target) &&
+                    e.target !== searchInput) {
+                    hideSearchHistory();
+                }
+            });
+        });
+
+        // 获取并显示搜索建议
+        function fetchSuggestions(query) {
+            const currentSearchType = document.getElementById('searchType').value;
+            if (currentSearchType === 'document') {
+                return; // 如果是文档查询，直接返回不获取建议
+            }
+            fetch(`/suggest?q=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(suggestions => {
+                    if (suggestions.length > 0) {
+                        showSuggestions(suggestions);
+                    } else {
+                        hideSuggestions();
+                    }
+                })
+                .catch(error => {
+                    console.error('获取建议失败:', error);
+                    hideSuggestions();
+                });
+        }
+
+        // 显示搜索建议
+        function showSuggestions(suggestions) {
+            suggestionsContainer.innerHTML = suggestions.map(suggestion => `
+                <div class="suggestion-item" onclick="selectSuggestion('${suggestion.text}')">
+                    <span class="suggestion-text">${suggestion.text}</span>
+                    ${suggestion.source ? `<span class="suggestion-source">${suggestion.source}</span>` : ''}
+                </div>
+            `).join('');
+
+            suggestionsContainer.style.display = 'block';
+        }
+
+        // 隐藏搜索建议
+        function hideSuggestions() {
+            suggestionsContainer.style.display = 'none';
+        }
+
+        // 选择建议
+        function selectSuggestion(text) {
+            document.getElementById('searchInput').value = text;
+            hideSuggestions();
+            performSearch(1);
+        }
+
+        // 获取并显示搜索历史
+        function fetchSearchHistory() {
+            fetch('/search-history')
+                .then(response => {
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    throw new Error('未登录或无法获取搜索历史');
+                })
+                .then(history => {
+                    if (history.length > 0) {
+                        showSearchHistory(history);
+                    } else {
+                        hideSearchHistory();
+                    }
+                })
+                .catch(error => {
+                    console.error('获取搜索历史失败:', error);
+                    hideSearchHistory();
+                });
+        }
+
+        // 显示搜索历史
+        function showSearchHistory(history) {
+            // 只取最新的10条记录
+            const recentHistory = history.slice(0, 10);
+
+            searchHistoryContainer.innerHTML = recentHistory.map(item => `
+                <div class="search-history-item" onclick="selectHistory('${item.query}')">
+                    <span class="search-history-query">${item.query}</span>
+                    <span class="search-history-date">${formatDate(item.timestamp)}</span>
+                </div>
+            `).join('');
+
+            searchHistoryContainer.classList.add('visible');
+        }
+
+        // 隐藏搜索历史
+        function hideSearchHistory() {
+            searchHistoryContainer.classList.remove('visible');
+            searchHistoryContainer.innerHTML = '';
+        }
+
+        // 选择搜索历史
+        function selectHistory(query) {
+            document.getElementById('searchInput').value = query;
+            hideSearchHistory();
+            performSearch(1);
+        }
+
+        function handleSearchTypeChange() {
+            const searchType = document.getElementById('searchType').value;
+            const docTypeFilter = document.getElementById('docTypeFilter');
+            const sourceInput = document.getElementById('sourceInput');
+
+            if (searchType === 'document') {
+                docTypeFilter.style.display = 'block';
+                sourceInput.style.display = 'none';
+            } else {
+                docTypeFilter.style.display = 'none';
+                sourceInput.style.display = 'block';
+            }
+        }
+
+        function displaySearchResults(data) {
+            const searchType = document.getElementById('searchType').value;
+
+            if (searchType === 'document') {
+                return displayDocumentResults(data);
+            } else {
+                return displayNewsResults(data);
+            }
+        }
+
+        function formatDate(dateString) {
+            if (!dateString) return '未知时间';
+            try {
+                const date = new Date(dateString);
+                if (isNaN(date.getTime())) return '日期格式错误';
+
+                return date.toLocaleDateString('zh-CN', {
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                console.error('Date formatting error:', e);
+                return '日期格式错误';
+            }
+        }
+
+         // 修改文档结果显示函数
+        function displayDocumentResults(data) {
+            return `
+                <div class="results-summary">
+                    找到 ${data.total} 个文档
+                    ${data.filters ? `<span class="filter-info">${data.filters}</span>` : ''}
+                </div>
+                ${data.results.map(doc => `
+                    <div class="doc-result-item">
+                        <div class="flex items-center gap-2">
+                            <span class="doc-type-badge">${doc.file_type.toUpperCase()}</span>
+                            <a href="${doc.url}" class="result-title" target="_blank">${doc.title}</a>
+                        </div>
+                        <div class="result-snippet">${doc.content}</div>
+                        <div class="doc-meta">
+                            <span>文件名: ${doc.filename}</span>
+                            <span>大小: ${formatFileSize(doc.length)}</span>
+                            <span>上传时间: ${formatDate(doc.date)}</span>
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // 执行搜索
+        // 修改搜索函数以包含新的筛选条件
+       function performSearch(page = 1) {
+        hideSuggestions();
+        hideSearchHistory();
+
+        const query = document.getElementById('searchInput').value;
+        const searchType = document.getElementById('searchType').value;
+        const startDate = document.getElementById('startDate').value;
+        const endDate = document.getElementById('endDate').value;
+        const source = document.getElementById('sourceInput').value;
+        const docType = document.getElementById('docTypeFilter').value;
+
+        if (!query) return;
+
+        const params = new URLSearchParams({
+            q: query,
+            type: searchType,
+            page: page
+        });
+
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+
+        if (searchType === 'document') {
+            if (docType) params.append('doc_type', docType);
+        } else {
+            if (source) params.append('source', source);
+        }
+        // 显示搜索提示
+        let searchTip = '';
+        if (searchType === 'phrase') {
+            searchTip = '使用短语搜索：匹配完整词组，词序必须相同';
+        } else if (searchType === 'wildcard') {
+            searchTip = '使用通配符搜索：可以使用 * 代表任意字符，例如：南开*大学';
+        }
+
+        const searchResults = document.getElementById('searchResults');
+        searchResults.innerHTML = `
+            <div class="result-item">
+                <div>搜索中...</div>
+                ${searchTip ? `<div class="search-tip">${searchTip}</div>` : ''}
+            </div>
+        `;
+
+        document.querySelector('.search-page').classList.add('results-shown');
+        document.getElementById('resultsContainer').classList.add('visible');
+
+        fetch(`/search?${params}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    searchResults.innerHTML = `<div class="result-item">
+                        <div class="error-message">${data.error}</div>
+                        ${searchTip ? `<div class="search-tip">${searchTip}</div>` : ''}
+                    </div>`;
+                    return;
+                }
+
+                if (data.results.length === 0) {
+                    searchResults.innerHTML = `<div class="result-item">
+                        <div>未找到相关结果</div>
+                        ${searchTip ? `<div class="search-tip">${searchTip}</div>` : ''}
+                    </div>`;
+                    return;
+                }
+
+                // 构造筛选条件描述
+                const filters = [];
+                if (startDate || endDate) {
+                    filters.push(`时间范围: ${startDate || '不限'} 至 ${endDate || '不限'}`);
+                }
+                if (source) {
+                    filters.push(`来源: ${source}`);
+                }
+
+                // 使用新的显示模板
+                searchResults.innerHTML = displaySearchResults({
+                    total: data.total,
+                    filters: filters.join(' · '),
+                    results: data.results
+                });
+
+                // 更新分页
+                updatePagination(page, Math.ceil(data.total / 10));
+            })
+            .catch(error => {
+                searchResults.innerHTML = `<div class="result-item">
+                    <div class="error-message">搜索出错，请稍后重试</div>
+                    ${searchTip ? `<div class="search-tip">${searchTip}</div>` : ''}
+                </div>`;
+                console.error('搜索错误:', error);
+            });
+    }
+
+    // 添加新的显示模板函数
+    function displayNewsResults(data) {
+        return `
+            <div class="results-summary">
+                找到 ${data.total} 条结果
+                ${data.filters ? `<span class="filter-info">${data.filters}</span>` : ''}
+            </div>
+            ${data.results.map(result => `
+                <div class="result-item">
+                    <a href="${result.url}" class="result-title" target="_blank">${result.title}</a>
+                    <div class="result-url">
+                        ${formatUrl(result.url)}
+                        ${result.snapshot ? `
+                            <a href="/snapshot/${result.snapshot.id}"
+                               class="snapshot-link"
+                               target="_blank">
+                               网页快照 (${formatDate(result.snapshot.captured_at)})
+                            </a>
+                        ` : ''}
+                    </div>
+                    <div class="result-snippet">${result.content}</div>
+                    <div class="result-meta">
+                        ${result.source} · ${formatDate(result.date)}
+                    </div>
+                </div>
+            `).join('')}
+        `;
+    }
+
+        // 更新分页函数
+        function updatePagination(currentPage, totalPages) {
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = `
+                <button onclick="performSearch(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>
+                    上一页
+                </button>
+                <span class="page-info">第 ${currentPage} 页 / 共 ${totalPages} 页</span>
+                <button onclick="performSearch(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>
+                    下一页
+                </button>
+            `;
+        }
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 B';
+            const k = 1024;
+            const sizes = ['B', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+        }
+        // 其他辅助函数保持不变
+        function formatUrl(url) {
+            const urlObj = new URL(url);
+            return urlObj.hostname + urlObj.pathname.slice(0, 50) + (urlObj.pathname.length > 50 ? '...' : '');
+        }
+
+        // 允许按回车键触发搜索
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                performSearch(1);
+            }
+        });
+    </script>
+</body>
+</html>
