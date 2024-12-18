@@ -93,7 +93,7 @@ Spider/
                         "keep_full_pinyin": True,
                         "keep_joined_full_pinyin": True,
                         "keep_original": True,
-                        "limit_first_letter_length": 16,
+                        "limit_first_letter_length":  16,
                         "remove_duplicated_term": True
                     }
                 }
